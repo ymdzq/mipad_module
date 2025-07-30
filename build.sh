@@ -134,6 +134,10 @@ echo "🛠️ 修补 MiuiSystemUI.apk..."
 cp -f "${pre_patch_file_dir}system_ext/priv-app/MiuiSystemUI/MiuiSystemUI.apk" "${patch_mods_dir}/MiuiSystemUISmali/MiuiSystemUI.apk"
 bash "${patch_mods_dir}/MiuiSystemUISmali/run.sh" "$input_android_target_version"
 
+echo "🛠️ 修补 miui-embedding-window.jar..."
+cp -f "${pre_patch_file_dir}system_ext/framework/miui-embedding-window.jar" "${patch_mods_dir}/miui-embedding-window-Smali/miui-embedding-window.jar"
+bash "${patch_mods_dir}/miui-embedding-window-Smali/run.sh" "$input_android_target_version"
+
 echo "🛠️ 修补 Settings.apk..."
 cp -f "${pre_patch_file_dir}system_ext/priv-app/Settings/Settings.apk" "${patch_mods_dir}/SettingsSmali/Settings.apk"
 bash "${patch_mods_dir}/SettingsSmali/run.sh" "$input_android_target_version"
@@ -141,6 +145,7 @@ bash "${patch_mods_dir}/SettingsSmali/run.sh" "$input_android_target_version"
 patched_files=(
   "miui-services-Smali/miui-services_out.jar"
   "MiuiSystemUISmali/MiuiSystemUI_out.apk"
+  "miui-embedding-window-Smali/miui-embedding-window.jar"
   "SettingsSmali/Settings_out.apk"
 )
 
@@ -160,6 +165,9 @@ cp -f "${patch_mods_dir}miui-services-Smali/miui-services_out.jar" "${release_di
 
 mkdir -p "${release_dir}system/system_ext/priv-app/MiuiSystemUI/"
 cp -f "${patch_mods_dir}MiuiSystemUISmali/MiuiSystemUI_out.apk" "${release_dir}system/system_ext/priv-app/MiuiSystemUI/MiuiSystemUI.apk"
+
+mkdir -p "${release_dir}system/system_ext/framework/"
+cp -f "${patch_mods_dir}miui-embedding-window-Smali/miui-embedding-window_out.jar" "${release_dir}system/system_ext/framework/miui-embedding-window.jar"
 
 mkdir -p "${release_dir}system/system_ext/priv-app/Settings/"
 cp -f "${patch_mods_dir}/SettingsSmali/Settings_out.apk" "${release_dir}system/system_ext/priv-app/Settings/Settings.apk"
