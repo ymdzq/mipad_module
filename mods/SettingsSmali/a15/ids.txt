@@ -1,0 +1,5 @@
+  <id name="storage_progress_kchi" />
+  <id name="device_name_in_banner" />
+  <id name="build_dev_info" />
+  <id name="device_info_wallpaper_blur_bg" />
+  <id name="about_phone_rom_name_info" />
