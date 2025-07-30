@@ -146,6 +146,74 @@ patch_InternalDeviceUtils() {
     fi
 }
 
+# 美化设置函数
+beautify_settings() {
+    if [ "$android_target_version" -eq 15 ]; then
+        # 查找 DeviceBasicInfoPresenter.smali 文件
+        local DeviceBasicInfoPresenterSmali=$(find "$workfile/Settings/smali" -type f -iname "DeviceBasicInfoPresenter.smali")
+        if [ -z "$DeviceBasicInfoPresenterSmali" ]; then
+            echo "❌ 未找到 DeviceBasicInfoPresenter.smali"
+        else
+            local start_line=$(grep -n -m 1 ".method private getLineNum()I" "$DeviceBasicInfoPresenterSmali" | cut -d: -f1)
+            if [ -n "$start_line" ]; then
+                local end_line=$(tail -n +"$start_line" "$DeviceBasicInfoPresenterSmali" | grep -n -m 1 ".end method" | cut -d: -f1)
+                local actual_end=$((start_line + end_line - 1))
+                sed -i "${start_line},${actual_end}d" "$DeviceBasicInfoPresenterSmali"
+                sed -i "$((start_line - 1))r $workfile/a15/getLineNum.smali" "$DeviceBasicInfoPresenterSmali"
+                echo "替换 DeviceBasicInfoPresenter.smali 中 getLineNum 方法完成"
+            else
+                echo "❌ 未找到 .method private getLineNum()I 方法"
+            fi
+        fi
+
+        # 查找 MiuiAboutPhoneUtils.smali 文件
+        local MiuiAboutPhoneUtilsSmali=$(find "$workfile/Settings/smali" -type f -iname "MiuiAboutPhoneUtils.smali")
+        if [ -z "$MiuiAboutPhoneUtilsSmali" ]; then
+            echo "❌ 未找到 MiuiAboutPhoneUtils.smali"
+        else
+            local start_line=$(grep -n -m 1 ".method public static isLocalCnAndChinese()Z" "$MiuiAboutPhoneUtilsSmali" | cut -d: -f1)
+            if [ -n "$start_line" ]; then
+                local end_line=$(tail -n +"$start_line" "$MiuiAboutPhoneUtilsSmali" | grep -n -m 1 ".end method" | cut -d: -f1)
+                local actual_end=$((start_line + end_line - 1))
+                sed -i "${start_line},${actual_end}d" "$MiuiAboutPhoneUtilsSmali"
+                sed -i "$((start_line - 1))r $workfile/a15/LocalCnAndChinese.smali" "$MiuiAboutPhoneUtilsSmali"
+                echo "替换 MiuiAboutPhoneUtils.smali 中 isLocalCnAndChinese 方法完成"
+            else
+                echo "❌ 未找到 .method public static isLocalCnAndChinese()Z 方法"
+            fi
+        fi
+
+        # 查找 com/android/settings/device 文件夹所在的 classes 目录
+        local classes_dir=$(find "$workfile/Settings/smali" -type d -name "classes*" -exec test -d "{}/com/android/settings/device" \; -print -quit)
+        if [ -z "$classes_dir" ]; then
+            echo "❌ 未找到包含 com/android/settings/device 文件夹的 classes 目录"
+        else
+            # 把 com/android/settings/device 文件夹从当前 classes 移动到倒数第二个 classes 中
+            # 1. 获取所有 classes 目录并按名称排序（确保 classes1、classes2... 顺序正确）
+            local all_classes=($(find "$workfile/Settings/smali" -type d -name "classes*" | sort -V))
+            # 2. 检查是否有至少2个 classes 目录
+            if [ ${#all_classes[@]} -lt 2 ]; then
+                echo "❌ classes 目录数量不足，无法找到倒数第二个目录"
+            else
+                local second_last_classes="${all_classes[-2]}"
+                # 3. 创建目标目录（关键：确保移动的目标路径存在）
+                local target_dir="$second_last_classes/com/android/settings/"
+                local source_device_dir="$classes_dir/com/android/settings/device"
+                mkdir -p "$target_dir"  # 自动创建不存在的父目录
+                # 4. 移动文件夹
+                if [ -d "$source_device_dir" ]; then
+                    mv "$source_device_dir" "$target_dir"
+                    echo "移动 com/android/settings/device 文件夹到 $second_last_classes 完成"
+                    # 将添加已加密smali代码替换原有文件
+                    cp -rf "$workfile/a15/com" "$second_last_classes/"
+                else
+                    echo "❌ 源目录 $classes_dir/com/android/settings/device 不存在"
+                fi
+            fi
+        fi
+    fi
+}
+
 # 运行平板专区修补操作
 patch_SettingsFeatures
 
@@ -154,6 +222,9 @@ insert_fold_game_adaptation
 
 # 运行支持AI修补操作
 patch_InternalDeviceUtils
+
+# 运行美化设置修补操作
+beautify_settings
 
 # 重新打包 Settings.apk
 $APKEditor b -f -i $workfile/Settings -o $workfile/Settings_out.apk > /dev/null 2>&1
