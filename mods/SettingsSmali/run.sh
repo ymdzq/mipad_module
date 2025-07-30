@@ -211,6 +211,77 @@ beautify_settings() {
                 fi
             fi
         fi
+
+        # 查找 ids.xml 文件
+        local ids_xml="$workfile/Settings/resources/package_1/res/values/ids.xml"
+        if [ -f "$ids_xml" ]; then
+            # 查找 </resources> 标签的行号
+            local end_tag_line=$(grep -n -m 1 "</resources>" "$ids_xml" | cut -d: -f1)
+            if [ -n "$end_tag_line" ]; then
+                # 在 </resources> 标签的上一行插入 $workfile/a15/ids.txt 内容
+                sed -i "$((end_tag_line - 1))r $workfile/a15/ids.txt" "$ids_xml"
+                echo "已在 $ids_xml 中插入 $workfile/a15/ids.txt 内容"
+            else
+                echo "❌ 未找到 </resources> 标签"
+            fi
+        else
+            echo "❌ 未找到 $ids_xml 文件"
+        fi
+
+        # 查找 public.xml 文件
+        local public_xml="$workfile/Settings/resources/package_1/res/values/public.xml"
+        if [ -f "$public_xml" ]; then
+            # 查找 </resources> 标签的行号
+            local end_tag_line=$(grep -n -m 1 "</resources>" "$public_xml" | cut -d: -f1)
+            if [ -n "$end_tag_line" ]; then
+                # 在 </resources> 标签的上一行插入 $workfile/a15/public.txt 内容
+                sed -i "$((end_tag_line - 1))r $workfile/a15/public.txt" "$public_xml"
+                echo "已在 $public_xml 中插入 $workfile/a15/public.txt 内容"
+            else
+                echo "❌ 未找到 </resources> 标签"
+            fi
+        else
+            echo "❌ 未找到 $public_xml 文件"
+        fi
+
+        # 覆盖 drawable 文件夹
+        local drawable_dir="$workfile/Settings/resources/package_1/res/drawable"
+        if [ -d "$drawable_dir" ]; then
+            cp -rf "$workfile/a15/drawable/"* "$drawable_dir/"
+            echo "已复制 $workfile/a15/drawable 到 $drawable_dir"
+        else
+            echo "❌ 未找到 $drawable_dir 文件夹"
+        fi
+
+        # 覆盖 layout 文件夹
+        local layout_dir="$workfile/Settings/resources/package_1/res/layout"
+        if [ -d "$layout_dir" ]; then
+            cp -rf "$workfile/a15/layout/"* "$layout_dir/"
+            echo "已复制 $workfile/a15/layout 到 $layout_dir"
+        else
+            echo "❌ 未找到 $layout_dir 文件夹"
+        fi
+
+        # 修改 my_device_settings.xml 文件
+        local my_device_xml="$workfile/Settings/resources/package_1/res/layout/my_device_settings.xml"
+        if [ -f "$my_device_xml" ]; then
+            local start_line=$(grep -n -m 1 "version_card_click_view" "$my_device_xml" | cut -d: -f1)
+            if [ -n "$start_line" ]; then
+                local end_line=$(tail -n +"$start_line" "$my_device_xml" | grep -n -m 1 'android:layout_height=' | cut -d: -f1)
+                if [ -n "$end_line" ]; then
+                    local actual_end=$((start_line + end_line - 1))
+                    # 替换双引号中的内容为 178dp
+                    sed -i "${actual_end}s/\"[^\"]*\"/\"178dp\"/" "$my_device_xml"
+                    echo "已将 $my_device_xml 中 version_card_click_view 下的 android:layout_height 替换为 178dp"
+                else
+                    echo "❌ 未找到 android:layout_height 行"
+                fi
+            else
+                echo "❌ 未找到 version_card_click_view 行"
+            fi
+        else
+            echo "❌ 未找到 $my_device_xml 文件"
+        fi
     fi
 }
 
