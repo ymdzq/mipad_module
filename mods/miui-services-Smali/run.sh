@@ -91,6 +91,33 @@ patch_MaxFreeFormCount() {
 
 }
 
+### 去除音量安全限制
+smali_sound_dose=$(find "$workfile/miui-services/smali/com/android/server/audio/" -type f -iname "SoundDoseHelperStubImpl.smali")
+
+if [ -z "$smali_sound_dose" ]; then
+  echo "❌ 未找到 SoundDoseHelperStubImpl.smali 文件"
+  exit 1
+fi
+
+patch_sound_dose() {
+start_line_sound_dose=$(grep -n -m 1 ".method public updateSafeMediaVolumeIndex(I)I" "$smali_sound_dose" | cut -d: -f1)
+# 从start_line_sound_dose开始查找第一个.end method行号
+end_line_sound_dose=$(tail -n +"$start_line_sound_dose" "$smali_sound_dose" | grep -n -m 1 ".end method" | cut -d: -f1)
+# 计算.end method的行号
+actual_end_line_sound_dose=$((start_line_sound_dose + end_line_sound_dose - 1))
+# 删除原方法内容
+sed -i "${start_line_sound_dose},${actual_end_line_sound_dose}d" "$smali_sound_dose"
+# 插入新方法内容
+cat << EOF | sed -i "$((start_line_sound_dose - 1))r /dev/stdin" "$smali_sound_dose"
+.method public updateSafeMediaVolumeIndex(I)I
+    .locals 2
+
+    const p0, 0x7fffffff
+
+    return p0
+.end method
+EOF
+}
 
 patch_MaxFreeFormCountEntry() {
   if [ "$android_target_version" -ge 16 ]; then
@@ -104,5 +131,7 @@ patch_MaxFreeFormCountEntry() {
 }
 
 patch_MaxFreeFormCountEntry
+# 运行去除音量安全限制修补操作
+patch_sound_dose
 
 $APKTool b $workfile/miui-services -o $workfile/miui-services_out.jar
