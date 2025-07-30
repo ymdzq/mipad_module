@@ -1,0 +1,10 @@
+  <public id="0x7f081421" type="drawable" name="ic_device_oos_inner" />
+  <public id="0x7f081422" type="drawable" name="ic_device_oos_bg" />
+  <public id="0x7f081423" type="drawable" name="oos_progress_drawable" />
+  <public id="0x7f0b0df5" type="id" name="storage_progress_kchi" />
+  <public id="0x7f0b0df6" type="id" name="device_name_in_banner" />
+  <public id="0x7f0b0df7" type="id" name="build_dev_info" />
+  <public id="0x7f0b0df8" type="id" name="device_info_wallpaper_blur_bg" />
+  <public id="0x7f0b0df9" type="id" name="about_phone_rom_name_info" />
+  <public id="0x7f0e0621" type="layout" name="device_info_item_kashi" />
+  <public id="0x7f0e0622" type="layout" name="storage_info_item_kashi" />
