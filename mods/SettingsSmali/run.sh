@@ -244,6 +244,16 @@ beautify_settings() {
             echo "❌ 未找到 $public_xml 文件"
         fi
 
+        # 修改卡片背景半透明，实现在日间模式开启模糊效果
+        local colors_xml="$workfile/Settings/resources/package_1/res/values/colors.xml"
+        if [ -f "$colors_xml" ]; then
+            # 正则匹配任意颜色值并替换为 #55ffffff
+            sed -i 's/<color name="my_device_info_item_background_color">#.*<\/color>/<color name="my_device_info_item_background_color">#55ffffff<\/color>/g' "$colors_xml"
+            echo "已将 $colors_xml 中的 my_device_info_item_background_color 修改为 #55ffffff"
+        else
+            echo "❌ 未找到 $colors_xml 文件"
+        fi
+
         # 覆盖 drawable 文件夹
         local drawable_dir="$workfile/Settings/resources/package_1/res/drawable"
         if [ -d "$drawable_dir" ]; then
