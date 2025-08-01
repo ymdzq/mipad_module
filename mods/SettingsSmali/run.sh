@@ -231,15 +231,88 @@ beautify_settings() {
         # 查找 public.xml 文件
         local public_xml="$workfile/Settings/resources/package_1/res/values/public.xml"
         if [ -f "$public_xml" ]; then
+            # 1. 查询目标ID值
+            # 获取 zen_lockscreen_selected_drawable 的id（type="drawable"）
+            local zen_id=$(grep -oP '^\s*<public id="\K0x[0-9a-fA-F]+(?=" type="drawable" name="zen_lockscreen_selected_drawable")' "$public_xml" | head -n1)
+            # 获取 zip 的id（type="id"）
+            local zip_id=$(grep -oP '^\s*<public id="\K0x[0-9a-fA-F]+(?=" type="id" name="zip")' "$public_xml" | head -n1)
+            # 获取 zone_picker_item 的id（type="layout"）
+            local zone_id=$(grep -oP '^\s*<public id="\K0x[0-9a-fA-F]+(?=" type="layout" name="zone_picker_item")' "$public_xml" | head -n1)
+
+            # 检查是否获取到所有必要ID
+            if [ -z "$zen_id" ]; then
+                echo "❌ 未找到 zen_lockscreen_selected_drawable（type=drawable）"
+            else
+                echo "✅ 找到 zen_lockscreen_selected_drawable: $zen_id"
+            fi
+            if [ -z "$zip_id" ]; then
+                echo "❌ 未找到 zip（type=id）"
+            else
+                echo "✅ 找到 zip: $zip_id"
+            fi
+            if [ -z "$zone_id" ]; then
+                echo "❌ 未找到 zone_picker_item（type=layout）"
+            else
+                echo "✅ 找到 zone_picker_item: $zone_id"
+            fi
+
+            # 2. 计算新ID（转为十进制计算后转回十六进制）
+            # drawable 类型：基于 zen_lockscreen_selected_drawable 递增
+            local zen_dec=$((16#${zen_id:2}))  # 去除0x前缀并转十进制
+            local drawable1=$((zen_dec + 9))   # 0x7f081412 +9 = 0x7f08141b（示例）
+            local drawable2=$((drawable1 + 1))
+            local drawable3=$((drawable2 + 1))
+
+            # id 类型：基于 zip 递增
+            local zip_dec=$((16#${zip_id:2}))
+            local id1=$((zip_dec + 7))        # 0x7f0b0dee +7 = 0x7f0b0df5（示例）
+            local id2=$((id1 + 1))
+            local id3=$((id2 + 1))
+            local id4=$((id3 + 1))
+            local id5=$((id4 + 1))
+
+            # layout 类型：基于 zone_picker_item 递增
+            local zone_dec=$((16#${zone_id:2}))
+            local layout1=$((zone_dec + 7))    # 0x7f0e061a +7 = 0x7f0e0621（示例）
+            local layout2=$((layout1 + 1))
+
+            # 3. 转换为十六进制（保留8位大写）
+            drawable1_hex=$(printf "0x%08X" $drawable1)
+            drawable2_hex=$(printf "0x%08X" $drawable2)
+            drawable3_hex=$(printf "0x%08X" $drawable3)
+            id1_hex=$(printf "0x%08X" $id1)
+            id2_hex=$(printf "0x%08X" $id2)
+            id3_hex=$(printf "0x%08X" $id3)
+            id4_hex=$(printf "0x%08X" $id4)
+            id5_hex=$(printf "0x%08X" $id5)
+            layout1_hex=$(printf "0x%08X" $layout1)
+            layout2_hex=$(printf "0x%08X" $layout2)
+
+            # 4. 临时修改 public.txt 内容
+            local temp_public=$(mktemp)
+            cat "$workfile/a15/public.txt" | \
+                sed "s/id=\".*\" type=\"drawable\" name=\"ic_device_oos_inner\"/id=\"$drawable1_hex\" type=\"drawable\" name=\"ic_device_oos_inner\"/" | \
+                sed "s/id=\".*\" type=\"drawable\" name=\"ic_device_oos_bg\"/id=\"$drawable2_hex\" type=\"drawable\" name=\"ic_device_oos_bg\"/" | \
+                sed "s/id=\".*\" type=\"drawable\" name=\"oos_progress_drawable\"/id=\"$drawable3_hex\" type=\"drawable\" name=\"oos_progress_drawable\"/" | \
+                sed "s/id=\".*\" type=\"id\" name=\"storage_progress_kchi\"/id=\"$id1_hex\" type=\"id\" name=\"storage_progress_kchi\"/" | \
+                sed "s/id=\".*\" type=\"id\" name=\"device_name_in_banner\"/id=\"$id2_hex\" type=\"id\" name=\"device_name_in_banner\"/" | \
+                sed "s/id=\".*\" type=\"id\" name=\"build_dev_info\"/id=\"$id3_hex\" type=\"id\" name=\"build_dev_info\"/" | \
+                sed "s/id=\".*\" type=\"id\" name=\"device_info_wallpaper_blur_bg\"/id=\"$id4_hex\" type=\"id\" name=\"device_info_wallpaper_blur_bg\"/" | \
+                sed "s/id=\".*\" type=\"id\" name=\"about_phone_rom_name_info\"/id=\"$id5_hex\" type=\"id\" name=\"about_phone_rom_name_info\"/" | \
+                sed "s/id=\".*\" type=\"layout\" name=\"device_info_item_kashi\"/id=\"$layout1_hex\" type=\"layout\" name=\"device_info_item_kashi\"/" | \
+                sed "s/id=\".*\" type=\"layout\" name=\"storage_info_item_kashi\"/id=\"$layout2_hex\" type=\"layout\" name=\"storage_info_item_kashi\"/" \
+                > "$temp_public"
+
             # 查找 </resources> 标签的行号
             local end_tag_line=$(grep -n -m 1 "</resources>" "$public_xml" | cut -d: -f1)
             if [ -n "$end_tag_line" ]; then
                 # 在 </resources> 标签的上一行插入 $workfile/a15/public.txt 内容
-                sed -i "$((end_tag_line - 1))r $workfile/a15/public.txt" "$public_xml"
-                echo "已在 $public_xml 中插入 $workfile/a15/public.txt 内容"
+                sed -i "$((end_tag_line - 1))r $temp_public" "$public_xml"
+                echo "已在 $public_xml 中插入修改后的 public.txt 内容"
             else
                 echo "❌ 未找到 </resources> 标签"
             fi
+            rm -f "$temp_public"  # 清理临时文件
         else
             echo "❌ 未找到 $public_xml 文件"
         fi
