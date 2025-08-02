@@ -3,7 +3,7 @@
              android:clipToPadding="false"
              android:layout_width="match_parent"
              android:layout_height="150.0dp"
-             android:layout_marginHorizontal="12.0dp"
+             android:layout_marginHorizontal="20.0dp"
              android:layout_marginVertical="16.0dp" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
   <ImageView android:id="@id/miui_logo_view"
              android:visibility="gone"

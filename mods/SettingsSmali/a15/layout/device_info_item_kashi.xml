@@ -2,7 +2,7 @@
 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent"
                       android:layout_height="130.0dp"
                       android:layout_marginBottom="16.0dp"
-                      android:layout_marginStart="12.0dp"
+                      android:layout_marginStart="0dp"
                       android:layout_marginEnd="8.0dp"
                       app:cardBackgroundColor="@color/my_device_info_item_background_color"
                       app:cardCornerRadius="19.0dp"
