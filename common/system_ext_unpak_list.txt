@@ -1,4 +1,5 @@
 /framework/miui-services.jar
 /priv-app/MiuiSystemUI/MiuiSystemUI.apk
-/priv-app/Settings/Settings.apk
 /etc/build.prop
+/framework/miui-embedding-window.jar
+/priv-app/Settings/Settings.apk
