@@ -14,26 +14,44 @@ if [ -z "$smali_file" ]; then
     exit 1
 fi
 
-# 搜索 getMiuiSizeCompatEnabledApps 行
-invoke_line=$(grep -n -m 1 "getMiuiSizeCompatEnabledApps" "$smali_file" | cut -d: -f1)
+# 查找包含getMiuiSizeCompatEnabledApps的方法起始位置
+start_line=$(grep -n -m 1 "getMiuiSizeCompatEnabledApps" "$smali_file" | cut -d: -f1)
 
-if [ -n "$invoke_line" ]; then
-    # 从 invoke-static 行开始继续查找 move-result-object vX 行
-    reg_var=$(tail -n +"$invoke_line" "$smali_file" | grep -m 1 -o "move-result-object v[0-9]" | grep -o "v[0-9]")
+if [ -z "$start_line" ]; then
+    echo "❌ 未找到包含 getMiuiSizeCompatEnabledApps 的代码行"
+    exit 1
+fi
 
-    if [ -n "$reg_var" ]; then
-        # 找到 move-result-object vX 行所在的实际行号
-        move_result_line=$(grep -n -m 1 "move-result-object $reg_var" "$smali_file" | cut -d: -f1)
-        # 生成要插入的行
+# 查找该方法对应的.end method行号
+end_line=$(tail -n +"$start_line" "$smali_file" | grep -n -m 1 ".end method" | cut -d: -f1)
+actual_end_line=$((start_line + end_line - 1))
+
+echo "找到方法范围: 行 $start_line 至 $actual_end_line"
+
+# 在方法范围内查找move-result-object vX
+reg_var=$(sed -n "${start_line},${actual_end_line}p" "$smali_file" | grep -m 1 -o "move-result-object v[0-9]" | grep -o "v[0-9]")
+
+if [ -n "$reg_var" ]; then
+    # 找到该指令在文件中的实际行号
+    move_result_line=$(grep -n "move-result-object $reg_var" "$smali_file" | cut -d: -f1 | while read line; do
+        if [ $line -ge $start_line ] && [ $line -le $actual_end_line ]; then
+            echo $line
+            exit 0
+        fi
+    done)
+
+    if [ -n "$move_result_line" ]; then
+        # 插入常量赋值指令
         insert_line="    const/4 $reg_var, 0x0"
-        # 在 move-result-object vX 行的下一行插入 const/4 vX, 0x0
         sed -i "${move_result_line}a $insert_line" "$smali_file"
-        echo "已在 $smali_file 中插入 $insert_line"
+        echo "✅ 已在方法范围内的 move-result-object $reg_var 后插入 $insert_line"
     else
-        echo "❌ 未找到 move-result-object vX 行，请检查 $smali_file 文件中 invoke-static 行之后的内容"
+        echo "❌ 在方法范围内未找到有效的 move-result-object $reg_var"
+        exit 1
     fi
 else
-    echo "❌ 未找到 getMiuiSizeCompatEnabledApps 行"
+    echo "❌ 在方法范围内未找到 move-result-object 指令"
+    exit 1
 fi
 
 $APKTool b $workfile/miui-embedding-window -o $workfile/miui-embedding-window_out.jar  > /dev/null
