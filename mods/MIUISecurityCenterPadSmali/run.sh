@@ -110,9 +110,98 @@ handle_device_list_method() {
         "Lmiui/os/Build;->DEVICE:Ljava/lang/String;"
 }
 
+# 处理 MiSafetyDetectService.smali 中的 l(Ljava/lang/Object;)V 方法
+patch_safety_detect_service() {
+    local workfile=${0%/*}
+    # 查找目标smali文件
+    local target_smali=$(find "$workfile/MIUISecurityCenterPad/smali" \
+        -type f -iname "MiSafetyDetectService.smali" \
+        -path "*/com/xiaomi/security/xsof/*")
+
+    if [ -z "$target_smali" ]; then
+        echo "❌ 未找到 MiSafetyDetectService.smali"
+        return 1
+    fi
+    echo "🔍 找到目标文件: $target_smali"
+
+    # 查找目标方法起始行
+    local method_start=$(grep -n -m 1 ".method private l(Ljava/lang/Object;)V" "$target_smali" | cut -d: -f1)
+    if [ -z "$method_start" ]; then
+        echo "❌ 未找到目标方法 .method private l(Ljava/lang/Object;)V"
+        return 1
+    fi
+
+    # 查找方法结束行
+    local method_end_rel=$(tail -n +"$method_start" "$target_smali" | grep -n -m 1 ".end method" | cut -d: -f1)
+    local method_end=$((method_start + method_end_rel - 1))
+    if [ -z "$method_end_rel" ]; then
+        echo "❌ 未找到方法结束标记 .end method"
+        return 1
+    fi
+
+    # 提取原方法内容（用于分析逻辑关系）
+    local original_method=$(sed -n "${method_start},${method_end}p" "$target_smali")
+
+    # 1. 提取check-cast p1的目标类型X（原Lh9/a;）
+    #    从:cond_1标签后查找check-cast p1语句
+    local X=$(echo "$original_method" | sed -n '/:cond_1/,/.line/{/check-cast p1, /{s/.*check-cast p1, //;p;q}}')
+    if [ -z "$X" ]; then
+        echo "❌ 未能提取到check-cast目标类型X"
+        return 1
+    fi
+    echo "ℹ️ 提取到类型X: $X"
+
+    # 2. 提取字段c的类型Y（原Li9/b;）
+    #    从:pswitch_1标签后查找c字段的类型声明
+    local Y=$(echo "$original_method" | sed -n '/:pswitch_1/,/.line/{/->c:/{s/.*->c://;p;q}}')
+    if [ -z "$Y" ]; then
+        echo "❌ 未能提取到字段c的类型Y"
+        return 1
+    fi
+    echo "ℹ️ 提取到类型Y: $Y"
+
+    # 3. 在方法起止行之间搜索包含 .locals 或 .registers 的行
+    # 不处理空格，直接匹配包含目标字符串的行
+    local register_line=$(echo "$original_method" | grep -E ".locals|.registers" | head -n 1)
+    # 如果仍未找到，使用默认值（.locals 7）并警告
+    if [ -z "$register_line" ]; then
+        echo "⚠️ 未找到寄存器声明，使用默认值 .locals 7"
+        register_line=".locals 7"
+    fi
+    echo "ℹ️ 提取到寄存器声明: $register_line"
+
+    # 4. 处理外部模板文件，替换占位符
+    local template_file="$workfile/safety_detect_service.smali"
+    if [ ! -f "$template_file" ]; then
+        echo "❌ 未找到外部模板文件 $template_file"
+        return 1
+    fi
+
+    # 替换模板中的占位符：寄存器声明、X类型、Y类型
+    # 转义替换内容中的特殊字符（尤其是/和&）
+    local esc_register=$(echo "$register_line" | sed 's/[\/&]/\\&/g')
+    local esc_X=$(echo "$X" | sed 's/[\/&]/\\&/g')
+    local esc_Y=$(echo "$Y" | sed 's/[\/&]/\\&/g')
+
+    # 使用|作为分隔符避免与/冲突
+    local replacement=$(sed \
+        -e "s|{REGISTER_DECLARATION}|$esc_register|" \
+        -e "s|Lh9/a;|$esc_X|" \
+        -e "s|Li9/b;|$esc_Y|" \
+        "$template_file")
+
+    # 5. 执行替换操作
+    echo "✏️ 替换目标方法（行 $method_start-$method_end）"
+    sed -i "${method_start},${method_end}d" "$target_smali"
+    sed -i "$((method_start - 1))r /dev/stdin" "$target_smali" <<< "$replacement"
+}
+
 # 执行游戏显示布局修补操作
 handle_turner_method
 handle_device_list_method
+
+# 执行安全管家反“内鬼”修补操作
+patch_safety_detect_service
 
 # 重新打包 MIUISecurityCenterPad.apk
 $APKEditor b -f -i "$workfile/MIUISecurityCenterPad" -o "$workfile/MIUISecurityCenterPad_out.apk" > /dev/null 2>&1
