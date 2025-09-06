@@ -196,12 +196,69 @@ patch_safety_detect_service() {
     sed -i "$((method_start - 1))r /dev/stdin" "$target_smali" <<< "$replacement"
 }
 
+# 处理 MiSafetyDetectService 的 onCreate 方法插入Toast
+patch_safety_detect_oncreate() {
+    local workfile=${0%/*}
+    # 定位目标smali文件
+    local target_smali=$(find "$workfile/MIUISecurityCenterPad/smali" \
+        -type f -iname "MiSafetyDetectService.smali" \
+        -path "*/com/xiaomi/security/xsof/*")
+
+    if [ -z "$target_smali" ]; then
+        echo "❌ 未找到 MiSafetyDetectService.smali"
+        return 1
+    fi
+    echo "🔍 找到目标文件: $target_smali"
+
+    # 查找onCreate方法起始行
+    local method_start=$(grep -n -m 1 ".method public onCreate()V" "$target_smali" | cut -d: -f1)
+    if [ -z "$method_start" ]; then
+        echo "❌ 未找到目标方法 .method public onCreate()V"
+        return 1
+    fi
+
+    # 查找方法结束行（.end method）
+    local method_end_rel=$(tail -n +"$method_start" "$target_smali" | grep -n -m 1 ".end method" | cut -d: -f1)
+    local actual_method_end=$((method_start + method_end_rel - 1))
+    if [ -z "$method_end_rel" ]; then
+        echo "❌ 未找到方法结束标记 .end method"
+        return 1
+    fi
+
+    # 在方法范围内搜索包含 .locals 或 .registers 的行
+    # 获取完整行内容和行号
+    local register_info=$(sed -n "${method_start},${actual_method_end}p" "$target_smali" | grep -nE ".locals|.registers" | head -n 1)
+    # 如果未找到，使用默认值并警告
+    if [ -z "$register_info" ]; then
+        echo "⚠️ 未找到寄存器声明，使用默认值 .locals 7"
+        local register_line=".locals 7"
+        # 默认插入到.method后第一行
+        local register_line_num=$((method_start + 1))
+    else
+        # 拆分行号和内容（格式：行号:内容）
+        local register_line_num=$(echo "$register_info" | cut -d: -f1)
+        # 计算实际行号（相对于文件的绝对行号）
+        register_line_num=$((method_start + register_line_num - 1))
+        local register_line=$(echo "$register_info" | cut -d: -f2-)
+    fi
+
+    echo "ℹ️ 提取到寄存器声明: $register_line（行号: $register_line_num）"
+
+    # 在寄存器声明后插入Toast代码
+    local insert_line=$((register_line_num + 1))
+    echo "✏️ 在第 $insert_line 行插入Toast提示代码"
+    sed -i "${insert_line}r $workfile/onCreate_toast.smali" "$target_smali"
+}
+
 # 执行游戏显示布局修补操作
 handle_turner_method
 handle_device_list_method
 
 # 执行安全管家反“内鬼”修补操作
 patch_safety_detect_service
+
+# 执行安全管家“内鬼”行为提醒修补操作
+patch_safety_detect_oncreate
 
 # 重新打包 MIUISecurityCenterPad.apk
 $APKEditor b -f -i "$workfile/MIUISecurityCenterPad" -o "$workfile/MIUISecurityCenterPad_out.apk" > /dev/null 2>&1
