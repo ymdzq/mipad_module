@@ -15,6 +15,7 @@ TMPDir="$workfile/tmp/"
 DistDir="$workfile/dist/"
 payload_img_dir="${TMPDir}payload_img/"
 pre_patch_file_dir="${TMPDir}pre_patch_file/"
+product_pre_patch_dir="${TMPDir}product_pre_patch/"
 patch_mods_dir="${TMPDir}patch_mods/"
 release_dir="${TMPDir}release/"
 
@@ -55,10 +56,16 @@ echo "⬇️ 获取 system_ext.img..."
 # 本地测试用例，使用时需修改 TARGET_ZIP_NAME 值并放置 ROM 包 ，同时 **取消注释下面两条语句** 和 **注释原来的 PayloadExtract 语句**
 # TARGET_ZIP_NAME="sheng-ota_full-OS2.0.205.0.VNXCNXM-user-15.0-ff1ab1912a.zip"
 # $PayloadExtract -i "$TARGET_ZIP_NAME" -t zip -o "$payload_img_dir" -X system_ext
-$PayloadExtract -i "$input_rom_url" -t url -o "$payload_img_dir" -X system_ext
+$PayloadExtract -i "$input_rom_url" -t url -o "$payload_img_dir" -X system_ext,product
 
 if [ ! -f "${payload_img_dir}system_ext.img" ]; then
   echo "❌ 找不到 system_ext.img" >&2
+  exit 1
+fi
+
+# 检查product.img是否存在
+if [ ! -f "${payload_img_dir}product.img" ]; then
+  echo "❌ 找不到 product.img" >&2
   exit 1
 fi
 
@@ -73,6 +80,19 @@ if [[ "$img_type" == "erofs" ]]; then
 elif [[ "$img_type" == "ext" ]]; then
   echo "📦 使用 imgextractorLinux 解包 system_ext.img..."
   sudo "$ExtractExt4" "${payload_img_dir}system_ext.img" "$pre_patch_file_dir"
+fi
+
+# 新增：解包product.img（根据镜像类型选择工具）
+product_img_type=$("$GetType" -i "${payload_img_dir}product.img")
+if [[ "$product_img_type" == "erofs" ]]; then
+  echo "📦 使用 extract.erofs 解包 product.img..."
+  "$ExtractErofs" \
+    -i "${payload_img_dir}product.img" \
+    -x -c "$workfile/common/product_unpak_list.txt" \
+    -o "$product_pre_patch_dir"
+elif [[ "$product_img_type" == "ext" ]]; then
+  echo "📦 使用 imgextractorLinux 解包 product.img..."
+  sudo "$ExtractExt4" "${payload_img_dir}product.img" "$product_pre_patch_dir"
 fi
 
 # 检查提取文件
@@ -109,6 +129,35 @@ if [[ "$img_type" == "ext" ]]; then
 fi
 sudo chmod -R 777 ${pre_patch_file_dir}system_ext
 
+# 新增：校验product提取文件
+product_unpak_list_file="$workfile/common/product_unpak_list.txt"
+echo "✅ 校验product解包文件是否提取成功..."
+
+if [ ! -f "$product_unpak_list_file" ]; then
+  echo "❌ 缺失列表文件: $product_unpak_list_file" >&2
+  exit 1
+fi
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  file=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [ -z "$file" ] && continue
+
+  full_path="${product_pre_patch_dir}product${file}"
+
+  echo "🔍 检查文件: $full_path"
+
+  if [ ! -f "$full_path" ]; then
+    echo "❌ 缺失文件: product${file}" >&2
+    exit 1
+  fi
+done <"$product_unpak_list_file"
+
+# 对ext格式的product镜像进行权限处理（参考system_ext的逻辑）
+if [[ "$product_img_type" == "ext" ]]; then
+  # 按需添加ext格式的特殊处理（如复制关键文件）
+  sudo chmod -R 777 "${product_pre_patch_dir}product"
+fi
+
 input_android_target_version=$(grep ro.system_ext.build.version.release= ${pre_patch_file_dir}system_ext/etc/build.prop | cut -d'=' -f2)
 rm -rf ${pre_patch_file_dir}system_ext/etc
 
@@ -138,10 +187,17 @@ echo "🛠️ 修补 Settings.apk..."
 cp -f "${pre_patch_file_dir}system_ext/priv-app/Settings/Settings.apk" "${patch_mods_dir}/SettingsSmali/Settings.apk"
 bash "${patch_mods_dir}/SettingsSmali/run.sh" "$input_android_target_version"
 
+echo "🛠️ 修补 MIUISecurityCenterPad.apk..."
+# 复制apk到修补工作目录
+cp -f "${product_pre_patch_dir}product/priv-app/MIUISecurityCenterPad/MIUISecurityCenterPad.apk" "${patch_mods_dir}/MIUISecurityCenterPadSmali/MIUISecurityCenterPad.apk"
+# 执行修补脚本（run.sh）
+bash "${patch_mods_dir}/MIUISecurityCenterPadSmali/run.sh" "$input_android_target_version"
+
 patched_files=(
   "miui-services-Smali/miui-services_out.jar"
   "MiuiSystemUISmali/MiuiSystemUI_out.apk"
   "SettingsSmali/Settings_out.apk"
+  "MIUISecurityCenterPadSmali/MIUISecurityCenterPad_out.apk"
 )
 
 echo "✅ 校验修补结果..."
@@ -163,6 +219,9 @@ cp -f "${patch_mods_dir}MiuiSystemUISmali/MiuiSystemUI_out.apk" "${release_dir}s
 
 mkdir -p "${release_dir}system/system_ext/priv-app/Settings/"
 cp -f "${patch_mods_dir}/SettingsSmali/Settings_out.apk" "${release_dir}system/system_ext/priv-app/Settings/Settings.apk"
+
+mkdir -p "${release_dir}system/product/priv-app/MIUISecurityCenterPad/"
+cp -f "${patch_mods_dir}MIUISecurityCenterPadSmali/MIUISecurityCenterPad_out.apk" "${release_dir}system/product/priv-app/MIUISecurityCenterPad/MIUISecurityCenterPad.apk"
 
 echo "📝 更新 module.prop 中的版本号..."
 sed -i "s/^version=.*/version=${input_rom_version}/" "${release_dir}module.prop"
