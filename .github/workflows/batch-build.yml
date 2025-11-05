@@ -10,7 +10,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: 🧾 检出 batch_rom_list.json
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@main
         with:
           sparse-checkout: |
             batch_rom_list.json
@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: 🧾 克隆仓库
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@main
 
       - name: 🛠 安装依赖
         run: |
@@ -56,7 +56,7 @@ jobs:
           bash ./build.sh --rom "${{ matrix.rom }}" \
                           --url "$url"
       - name: 📦 上传构建产物
-        uses: actions/upload-artifact@v5.0.0
+        uses: actions/upload-artifact@main
         with:
           name: "${{ matrix.device }}-${{ matrix.rom }}"
           path: tmp/release/
@@ -66,7 +66,7 @@ jobs:
     needs: build
     steps:
       - name: ⬇️ 下载所有构建产物
-        uses: actions/download-artifact@v6.0.0
+        uses: actions/download-artifact@main
         with:
           path: combined-artifacts
 
@@ -94,7 +94,7 @@ jobs:
           done
 
       - name: 📦 上传总构建产物
-        uses: actions/upload-artifact@v5.0.0
+        uses: actions/upload-artifact@main
         with:
           name: batch-build-artifacts-${{ github.run_id }}-${{ steps.datetime.outputs.datetime }}
           path: combined-artifacts/
