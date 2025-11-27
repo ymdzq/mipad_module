@@ -179,25 +179,25 @@ echo "🛠️ 修补 miui-services.jar..."
 cp -f "${pre_patch_file_dir}system_ext/framework/miui-services.jar" "${patch_mods_dir}/miui-services-Smali/miui-services.jar"
 bash "${patch_mods_dir}/miui-services-Smali/run.sh" "$input_android_target_version"
 
-echo "🛠️ 修补 MiuiSystemUI.apk..."
+echo "🛠️ 跳过修补 MiuiSystemUI.apk..."
 cp -f "${pre_patch_file_dir}system_ext/priv-app/MiuiSystemUI/MiuiSystemUI.apk" "${patch_mods_dir}/MiuiSystemUISmali/MiuiSystemUI.apk"
-bash "${patch_mods_dir}/MiuiSystemUISmali/run.sh" "$input_android_target_version"
+cp -f "${pre_patch_file_dir}system_ext/priv-app/MiuiSystemUI/MiuiSystemUI.apk" "${patch_mods_dir}/MiuiSystemUISmali/MiuiSystemUI_out.apk"
 
 echo "🛠️ 修补 Settings.apk..."
 cp -f "${pre_patch_file_dir}system_ext/priv-app/Settings/Settings.apk" "${patch_mods_dir}/SettingsSmali/Settings.apk"
 bash "${patch_mods_dir}/SettingsSmali/run.sh" "$input_android_target_version"
 
-echo "🛠️ 修补 MIUISecurityCenterPad.apk..."
+echo "🛠️ 修补 MIUISecurityCenter.apk..."
 # 复制apk到修补工作目录
-cp -f "${product_pre_patch_dir}product/priv-app/MIUISecurityCenterPad/MIUISecurityCenterPad.apk" "${patch_mods_dir}/MIUISecurityCenterPadSmali/MIUISecurityCenterPad.apk"
+cp -f "${product_pre_patch_dir}product/priv-app/MIUISecurityCenter/MIUISecurityCenter.apk" "${patch_mods_dir}/MIUISecurityCenterSmali/MIUISecurityCenter.apk"
 # 执行修补脚本（run.sh）
-bash "${patch_mods_dir}/MIUISecurityCenterPadSmali/run.sh" "$input_android_target_version"
+bash "${patch_mods_dir}/MIUISecurityCenterSmali/run.sh" "$input_android_target_version"
 
 patched_files=(
   "miui-services-Smali/miui-services_out.jar"
   "MiuiSystemUISmali/MiuiSystemUI_out.apk"
   "SettingsSmali/Settings_out.apk"
-  "MIUISecurityCenterPadSmali/MIUISecurityCenterPad_out.apk"
+  "MIUISecurityCenterSmali/MIUISecurityCenter_out.apk"
 )
 
 echo "✅ 校验修补结果..."
@@ -214,14 +214,11 @@ cp -a "$workfile/module_src/." "$release_dir"
 mkdir -p "${release_dir}system/system_ext/framework/"
 cp -f "${patch_mods_dir}miui-services-Smali/miui-services_out.jar" "${release_dir}system/system_ext/framework/miui-services.jar"
 
-mkdir -p "${release_dir}system/system_ext/priv-app/MiuiSystemUI/"
-cp -f "${patch_mods_dir}MiuiSystemUISmali/MiuiSystemUI_out.apk" "${release_dir}system/system_ext/priv-app/MiuiSystemUI/MiuiSystemUI.apk"
-
 mkdir -p "${release_dir}system/system_ext/priv-app/Settings/"
 cp -f "${patch_mods_dir}/SettingsSmali/Settings_out.apk" "${release_dir}system/system_ext/priv-app/Settings/Settings.apk"
 
-mkdir -p "${release_dir}system/product/priv-app/MIUISecurityCenterPad/"
-cp -f "${patch_mods_dir}MIUISecurityCenterPadSmali/MIUISecurityCenterPad_out.apk" "${release_dir}system/product/priv-app/MIUISecurityCenterPad/MIUISecurityCenterPad.apk"
+mkdir -p "${release_dir}system/product/priv-app/MIUISecurityCenter/"
+cp -f "${patch_mods_dir}MIUISecurityCenterSmali/MIUISecurityCenter_out.apk" "${release_dir}system/product/priv-app/MIUISecurityCenter/MIUISecurityCenter.apk"
 
 echo "📝 更新 module.prop 中的版本号..."
 sed -i "s/^version=.*/version=${input_rom_version}/" "${release_dir}module.prop"

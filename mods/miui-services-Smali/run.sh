@@ -130,7 +130,7 @@ patch_MaxFreeFormCountEntry() {
   fi
 }
 
-patch_MaxFreeFormCountEntry
+# patch_MaxFreeFormCountEntry
 # 运行去除音量安全限制修补操作
 patch_sound_dose
 

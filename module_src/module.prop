@@ -1,7 +1,7 @@
-id=xiaomi_pad_system_patch_additional_module
-name=小米平板 Hyper OS 系统功能增强附加模块
+id=xiaomi_phone_system_patch_additional_module
+name=小米手机 Hyper OS 系统功能增强附加模块
 version=
 versionCode=10012
-author=sothx、柚稚
-description=提供全局无极小窗、自定义小窗数量、分屏黑名单、窗口控制器等丰富系统功能增强，功能开关位于[完美横屏应用计划-系统体验增强]
+author=sothx、柚稚、ymdzq
+description=提供设置美化我的设备卡片、管家绿化系统功能增强
 

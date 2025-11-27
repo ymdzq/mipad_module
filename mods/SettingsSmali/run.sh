@@ -359,10 +359,10 @@ beautify_settings() {
 }
 
 # 运行平板专区修补操作
-patch_SettingsFeatures
+# patch_SettingsFeatures
 
 # 运行游戏显示布局菜单插入操作
-insert_fold_game_adaptation
+# insert_fold_game_adaptation
 
 # 运行支持AI修补操作
 if [ "$android_target_version" -eq 16 ] || [ "$android_target_version" -eq 15 ]; then

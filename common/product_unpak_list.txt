@@ -1,1 +1,1 @@
-/priv-app/MIUISecurityCenterPad/MIUISecurityCenterPad.apk
+/priv-app/MIUISecurityCenter/MIUISecurityCenter.apk

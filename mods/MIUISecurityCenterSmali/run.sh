@@ -3,7 +3,7 @@
 android_target_version="$1"
 workfile=${0%/*}
 APKEditor="java -jar $workfile/../../../common/jar/APKEditor.jar"
-$APKEditor d -f -i "$workfile/MIUISecurityCenterPad.apk" -o "$workfile/MIUISecurityCenterPad" > /dev/null 2>&1
+$APKEditor d -f -i "$workfile/MIUISecurityCenter.apk" -o "$workfile/MIUISecurityCenter" > /dev/null 2>&1
 
 # 替换目标方法的核心函数（动态匹配原方法签名）
 replace_target_method() {
@@ -11,7 +11,7 @@ replace_target_method() {
     local target_feature="$2"         # 目标方法特征（turner或Lmiui/os/Build;->DEVICE）
 
     # 查找所有包含锚点特征的smali文件
-    local target_files=$(grep -r -l "$anchor_pattern" "$workfile/MIUISecurityCenterPad/smali")
+    local target_files=$(grep -r -l "$anchor_pattern" "$workfile/MIUISecurityCenter/smali")
     if [ -z "$target_files" ]; then
         echo "⚠️ 未找到包含 $anchor_pattern 的文件"
         return 1
@@ -114,7 +114,7 @@ handle_device_list_method() {
 patch_safety_detect_service() {
     local workfile=${0%/*}
     # 查找目标smali文件
-    local target_smali=$(find "$workfile/MIUISecurityCenterPad/smali" \
+    local target_smali=$(find "$workfile/MIUISecurityCenter/smali" \
         -type f -iname "MiSafetyDetectService.smali" \
         -path "*/com/xiaomi/security/xsof/*")
 
@@ -200,7 +200,7 @@ patch_safety_detect_service() {
 patch_safety_detect_oncreate() {
     local workfile=${0%/*}
     # 定位目标smali文件
-    local target_smali=$(find "$workfile/MIUISecurityCenterPad/smali" \
+    local target_smali=$(find "$workfile/MIUISecurityCenter/smali" \
         -type f -iname "MiSafetyDetectService.smali" \
         -path "*/com/xiaomi/security/xsof/*")
 
@@ -251,8 +251,8 @@ patch_safety_detect_oncreate() {
 }
 
 # 执行游戏显示布局修补操作
-handle_turner_method
-handle_device_list_method
+#handle_turner_method
+#handle_device_list_method
 
 # 执行安全管家反“内鬼”修补操作
 patch_safety_detect_service
@@ -260,5 +260,5 @@ patch_safety_detect_service
 # 执行安全管家“内鬼”行为提醒修补操作
 patch_safety_detect_oncreate
 
-# 重新打包 MIUISecurityCenterPad.apk
-$APKEditor b -f -i "$workfile/MIUISecurityCenterPad" -o "$workfile/MIUISecurityCenterPad_out.apk" > /dev/null 2>&1
+# 重新打包 MIUISecurityCenter.apk
+$APKEditor b -f -i "$workfile/MIUISecurityCenter" -o "$workfile/MIUISecurityCenter_out.apk" > /dev/null 2>&1
