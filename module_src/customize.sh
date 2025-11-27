@@ -3,6 +3,13 @@ SKIPUNZIP=0
 magisk_path=/data/adb/modules/
 module_id=$(grep_prop id "$MODPATH/module.prop")
 
+REPLACE="
+/system/product/app/AnalyticsCore/oat/
+/system/product/app/HybridPlatform/
+/system/product/app/MSA/
+/system/product/priv-app/MiGameCenterSDKService/
+"
+
 # 基础函数
 add_props() {
   local line="$1"

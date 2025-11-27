@@ -1,0 +1,6 @@
+debug.game.video.speed=true
+debug.game.video.support=true
+persist.miui.extm.dm_opt.enable=true
+persist.sys.support_ultra_hdr=true
+ro.miui.shell_anim_enable_fcb=true
+ro.config.safe_media_volume_index=3000000
