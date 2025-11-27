@@ -1,5 +1,7 @@
 name: 构建 Magisk 模块
 
+run-name: 构建 Magisk 模块 (${{ inputs.rom }})
+
 on:
   workflow_dispatch:
     inputs:
