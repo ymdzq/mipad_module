@@ -1,7 +1,5 @@
 # 开启智能I/O调度
 persist.sys.stability.smartfocusio=on
-# 开启dm设备映射器
-persist.miui.extm.dm_opt.enable=true
 # 开启进游戏三倍速
 debug.game.video.support=true
 debug.game.video.speed=true
